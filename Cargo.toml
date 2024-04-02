@@ -32,7 +32,6 @@ lto = "fat"
 codegen-units = 1
 
 [workspace.dependencies]
-broadcast = { path = "crates/broadcast" }
 chunk = { path = "crates/chunk" }
 generator = { path = "crates/generator" }
 generator-build = { path = "crates/generator-build" }

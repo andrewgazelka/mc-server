@@ -1,5 +1,6 @@
 use std::iter::Zip;
 
+use bvh_arena::volumes::Aabb;
 use evenio::{component::Component, entity::EntityId, fetch::Fetcher};
 use fnv::FnvHashMap;
 use smallvec::SmallVec;
@@ -17,7 +18,7 @@ struct Index2D {
 
 #[derive(Component, Default)]
 pub struct EntityBoundingBoxes {
-    query: FnvHashMap<Index2D, Storage>,
+    query: bvh_arena::Bvh<EntityId, Aabb<2>>,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -99,33 +100,12 @@ impl EntityBoundingBoxes {
         reason = "https://github.com/andrewgazelka/hyperion/issues/73"
     )]
     pub fn insert(&mut self, bounding_box: BoundingBox, id: EntityId) {
-        let min2d = Vec2::new(bounding_box.min.x, bounding_box.min.z);
-        let max2d = Vec2::new(bounding_box.max.x, bounding_box.max.z);
+        let min = [bounding_box.min.x, bounding_box.min.z];
+        let max = [bounding_box.max.x, bounding_box.max.z];
 
-        let start_x = min2d.x.floor() as i32;
-        let start_z = min2d.y.floor() as i32;
+        let aabb = Aabb::from_min_max(min, max);
 
-        let end_x = max2d.x.ceil() as i32;
-        let end_z = max2d.y.ceil() as i32;
-
-        for x in start_x..=end_x {
-            for z in start_z..=end_z {
-                let coord = IVec2::new(x, z);
-
-                let storage = self.get_or_insert(coord);
-                storage.push(id);
-            }
-        }
-    }
-
-    fn get(&self, location: IVec2) -> Option<&Storage> {
-        let idx = idx(location);
-        self.query.get(&idx)
-    }
-
-    fn get_or_insert(&mut self, location: IVec2) -> &mut Storage {
-        let idx = idx(location);
-        self.query.entry(idx).or_insert(EMPTY_STORAGE)
+        self.query.insert(id, aabb);
     }
 
     // todo: is there a better way to do this
@@ -133,61 +113,60 @@ impl EntityBoundingBoxes {
         self.query.clear();
     }
 
-    #[must_use]
     #[expect(
         clippy::cast_possible_truncation,
         reason = "https://github.com/andrewgazelka/hyperion/issues/74"
     )]
-    pub fn get_collisions(
-        &self,
-        current: &CollisionContext,
-        fetcher: &Fetcher<(EntityId, &FullEntityPose, &EntityReaction)>,
-    ) -> Collisions {
-        let bounding = current.bounding;
+    pub fn get_all_collisions(&self, mut on_overlaping_pair: impl FnMut(EntityId, EntityId)) {
+        self.query.for_each_overlaping_pair(|a, b| {
+            on_overlaping_pair(*a, *b);
+        });
 
-        let min2d = Vec2::new(bounding.min.x, bounding.min.z);
-        let max2d = Vec2::new(bounding.max.x, bounding.max.z);
+        // let bounding = current.bounding;
 
-        let start_x = min2d.x.floor() as i32;
-        let start_z = min2d.y.floor() as i32;
-
-        let end_x = max2d.x.ceil() as i32;
-        let end_z = max2d.y.ceil() as i32;
-
-        let mut collisions_ids = SmallVec::<EntityId, 4>::new();
-        let mut collisions_poses = SmallVec::<FullEntityPose, 4>::new();
-
-        for x in start_x..=end_x {
-            for z in start_z..=end_z {
-                let coord = IVec2::new(x, z);
-
-                let Some(storage) = self.get(coord) else {
-                    continue;
-                };
-
-                for &id in storage {
-                    if id == current.id {
-                        continue;
-                    }
-
-                    let Ok((_, other_pose, _)) = fetcher.get(id) else {
-                        // the entity is probably expired / has been removed
-                        continue;
-                    };
-
-                    // todo: see which way ordering this has the most performance
-                    if bounding.collides(other_pose.bounding) && !collisions_ids.contains(&id) {
-                        collisions_ids.push(id);
-                        collisions_poses.push(*other_pose);
-                    }
-                }
-            }
-        }
-
-        Collisions {
-            ids: collisions_ids,
-            poses: collisions_poses,
-        }
+        // let min2d = Vec2::new(bounding.min.x, bounding.min.z);
+        // let max2d = Vec2::new(bounding.max.x, bounding.max.z);
+        //
+        // let start_x = min2d.x.floor() as i32;
+        // let start_z = min2d.y.floor() as i32;
+        //
+        // let end_x = max2d.x.ceil() as i32;
+        // let end_z = max2d.y.ceil() as i32;
+        //
+        // let mut collisions_ids = SmallVec::<EntityId, 4>::new();
+        // let mut collisions_poses = SmallVec::<FullEntityPose, 4>::new();
+        //
+        // for x in start_x..=end_x {
+        //     for z in start_z..=end_z {
+        //         let coord = IVec2::new(x, z);
+        //
+        //         let Some(storage) = self.get(coord) else {
+        //             continue;
+        //         };
+        //
+        //         for &id in storage {
+        //             if id == current.id {
+        //                 continue;
+        //             }
+        //
+        //             let Ok((_, other_pose, _)) = fetcher.get(id) else {
+        //                 // the entity is probably expired / has been removed
+        //                 continue;
+        //             };
+        //
+        //             // todo: see which way ordering this has the most performance
+        //             if bounding.collides(other_pose.bounding) && !collisions_ids.contains(&id) {
+        //                 collisions_ids.push(id);
+        //                 collisions_poses.push(*other_pose);
+        //             }
+        //         }
+        //     }
+        // }
+        //
+        // Collisions {
+        //     ids: collisions_ids,
+        //     poses: collisions_poses,
+        // }
     }
 }
 

@@ -15,22 +15,15 @@ use crate::{
 pub fn entity_detect_collisions(
     _: Receiver<Gametick>,
     entity_bounding_boxes: Single<&EntityBoundingBoxes>,
-    poses_fetcher: Fetcher<(EntityId, &FullEntityPose, &EntityReaction)>,
+    poses_fetcher: Fetcher<(&FullEntityPose, &EntityReaction)>,
 ) {
     let entity_bounding_boxes = entity_bounding_boxes.0;
 
-    poses_fetcher.par_iter().for_each(|(id, pose, reaction)| {
-        let context = CollisionContext {
-            bounding: pose.bounding,
-            id,
-        };
+    entity_bounding_boxes.get_all_collisions(|a, b| {
+        let (pose, reaction) = poses_fetcher.get(a).unwrap();
+        let (other_pose, other_reaction) = poses_fetcher.get(b).unwrap();
 
-        let collisions = entity_bounding_boxes.get_collisions(&context, &poses_fetcher);
-
-        for (_, other_pose) in collisions {
-            // safety: this is safe because we are doing this to one entity at a time so there
-            // is never a case where we are borrowing the same entity twice
-            unsafe { pose.apply_entity_collision(&other_pose, reaction) }
-        }
+        pose.apply_entity_collision(other_pose, unsafe { &mut *reaction.0.get() });
+        other_pose.apply_entity_collision(pose, unsafe { &mut *other_reaction.0.get() });
     });
 }

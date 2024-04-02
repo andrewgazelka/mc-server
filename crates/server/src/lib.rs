@@ -1,5 +1,6 @@
 #![feature(thread_local)]
 #![feature(lint_reasons)]
+#![feature(portable_simd)]
 #![expect(clippy::type_complexity, reason = "evenio uses a lot of complex types")]
 
 #[global_allocator]
@@ -28,7 +29,7 @@ use valence_protocol::math::Vec3;
 use crate::{
     bounding_box::BoundingBox,
     net::{server, ClientConnection, Packets, GLOBAL_PACKETS},
-    singleton::{encoder::Encoder, player_lookup::PlayerLookup},
+    singleton::{encoder::Encoder, player_uuid_lookup::PlayerUuidLookup},
 };
 
 mod global;
@@ -211,7 +212,7 @@ impl Game {
         world.insert(bounding_boxes, bounding_box::EntityBoundingBoxes::default());
 
         let lookup = world.spawn();
-        world.insert(lookup, PlayerLookup::default());
+        world.insert(lookup, PlayerUuidLookup::default());
 
         let encoder = world.spawn();
         world.insert(encoder, Encoder::default());
@@ -352,7 +353,7 @@ impl Game {
 fn process_packets(
     _: Receiver<Gametick>,
     mut fetcher: Fetcher<(EntityId, &mut Player, &mut FullEntityPose)>,
-    lookup: Single<&PlayerLookup>,
+    lookup: Single<&PlayerUuidLookup>,
     mut sender: Sender<(KickPlayer, InitEntity, KillAllEntities)>,
 ) {
     // uuid to entity id map

@@ -1,10 +1,10 @@
-use crate::{EntityReaction, FullEntityPose};
+use crate::{EntityReaction, EntityReactionInner, FullEntityPose};
 
 impl FullEntityPose {
     /// # Safety
     /// This is only safe is this is not done in tandem with another `EntityReaction`
     // #[instrument(skip_all)]
-    pub unsafe fn apply_entity_collision(&self, other: &Self, reaction: &EntityReaction) {
+    pub fn apply_entity_collision(&self, other: &Self, reaction: &mut EntityReactionInner) {
         const MULT_FACTOR: f32 = 2.0;
 
         let dx = other.position.x - self.position.x;
@@ -25,8 +25,6 @@ impl FullEntityPose {
                 vx /= largest_distance;
                 vz /= largest_distance;
             }
-
-            let reaction = &mut *reaction.0.get();
 
             reaction.velocity.x -= vx * MULT_FACTOR;
             reaction.velocity.z -= vz * MULT_FACTOR;
