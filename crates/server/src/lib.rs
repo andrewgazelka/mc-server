@@ -21,6 +21,7 @@ use ndarray::s;
 pub use rayon::iter::ParallelIterator;
 use signal_hook::iterator::Signals;
 use spin::Lazy;
+use sysinfo::{CpuRefreshKind, RefreshKind, System};
 use tracing::{debug, error, info, info_span, instrument, trace, warn};
 use valence_protocol::{math::Vec3, ByteAngle, VarInt};
 
@@ -114,10 +115,11 @@ struct KickPlayer {
 #[derive(Event)]
 struct KillAllEntities;
 
-#[derive(Event, Copy, Clone)]
+#[derive(Event, Clone)]
 struct StatsEvent {
     ms_per_tick_mean_1s: f64,
     ms_per_tick_mean_5s: f64,
+    cpus: Box<[f32]>,
 }
 
 #[derive(Event)]
@@ -164,6 +166,7 @@ pub fn adjust_file_limits(recommended_min: u64) -> std::io::Result<()> {
 
 pub struct Game {
     world: World,
+    system: System,
     last_ticks: VecDeque<Instant>,
     last_ms_per_tick: VecDeque<f64>,
     tick_on: u64,
@@ -266,6 +269,9 @@ impl Game {
             tick_on: 0,
             incoming,
             shutdown_tx,
+            system: System::new_with_specifics(
+                RefreshKind::new().with_cpu(CpuRefreshKind::everything()),
+            ),
         };
 
         game.last_ticks.push_back(Instant::now());
@@ -389,10 +395,20 @@ impl Game {
 
             debug!("ms / tick: {mean_1_second:.2}ms");
 
+            let cpus = self
+                .system
+                .cpus()
+                .iter()
+                .map(sysinfo::Cpu::cpu_usage)
+                .collect();
+
             self.world.send(StatsEvent {
                 ms_per_tick_mean_1s: mean_1_second,
                 ms_per_tick_mean_5s: mean_5_seconds,
+                cpus,
             });
+
+            self.system.refresh_all();
 
             self.last_ms_per_tick.pop_front();
         }
