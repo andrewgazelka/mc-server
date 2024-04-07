@@ -243,7 +243,7 @@ impl Game {
 
         world.add_handler(system::broadcast_packets);
         world.add_handler(system::keep_alive);
-        world.add_handler(process_packets);
+        world.add_handler(handle_ingress);
         world.add_handler(system::tps_message);
         world.add_handler(system::kill_all);
 
@@ -419,7 +419,7 @@ impl Game {
 
 // The `Receiver<Tick>` parameter tells our handler to listen for the `Tick` event.
 #[instrument(skip_all, level = "trace")]
-fn process_packets(
+fn handle_ingress(
     _: Receiver<Gametick>,
     mut fetcher: Fetcher<(EntityId, &mut Player, &mut FullEntityPose)>,
     lookup: Single<&PlayerUuidLookup>,
@@ -459,13 +459,16 @@ fn process_packets(
         let pos = pose.position.as_dvec3();
 
         // send packet for player moving
+        let entity_id = VarInt(id.index().0 as i32);
         let packet = valence_protocol::packets::play::EntityPositionS2c {
-            entity_id: VarInt(id.index().0 as i32),
+            entity_id,
             position: pos,
             yaw: ByteAngle(0),
             pitch: ByteAngle(0),
             on_ground: false,
         };
+
+        info!("sending packet for player moving for id {entity_id:?}");
 
         let meta = PacketMetadata {
             necessity: PacketNecessity::Droppable {

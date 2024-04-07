@@ -219,9 +219,9 @@ impl Encoder {
                 if buf.is_empty() {
                     return;
                 }
-
+    
                 // buf.
-
+    
                 f(buf);
                 buf.clear_packets();
             });

@@ -1,7 +1,7 @@
 use std::sync::atomic::Ordering;
 
 use evenio::prelude::*;
-use tracing::instrument;
+use tracing::{info, instrument};
 use valence_protocol::{
     packets::play,
     text::{Color, IntoText},
@@ -29,6 +29,8 @@ pub fn player_kick(
     let _ = io.writer.send_packet(&play::DisconnectS2c {
         reason: reason.into(),
     });
+
+    info!("player {} was kicked", player.name);
 
     // todo: also handle disconnecting without kicking, io socket being closed, etc
     SHARED.player_count.fetch_sub(1, Ordering::Relaxed);

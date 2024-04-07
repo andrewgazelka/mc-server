@@ -1,7 +1,7 @@
 use evenio::prelude::*;
-use tracing::instrument;
+use tracing::{info, instrument};
 
-use crate::{Gametick, Player};
+use crate::{Gametick, Player, SHARED};
 
 #[instrument(skip_all, level = "trace")]
 pub fn clean_up_io(
@@ -12,6 +12,8 @@ pub fn clean_up_io(
 ) {
     for (id, player) in &mut io_entities {
         if player.packets.writer.is_closed() {
+            info!("player {} disconnected", player.name);
+            SHARED.player_count.fetch_sub(1, std::sync::atomic::Ordering::Relaxed);
             s.send(Despawn(id));
         }
     }

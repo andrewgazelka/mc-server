@@ -2053,6 +2053,7 @@ dependencies = [
  "chunk",
  "divan",
  "evenio",
+ "fastrand 2.0.2",
  "flume",
  "generator 0.1.0",
  "glam",

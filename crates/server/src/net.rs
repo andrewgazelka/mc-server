@@ -350,7 +350,8 @@ impl Io {
 
         let username: Box<str> = Box::from(username.0);
 
-        let uuid = offline_uuid(&username)?; // todo: random
+        // let uuid = offline_uuid(&username)?; // todo: random
+        let uuid = Uuid::new_v4();
 
         let packet = LoginSuccessS2c {
             uuid,

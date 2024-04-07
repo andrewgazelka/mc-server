@@ -98,7 +98,7 @@ pub fn player_join_world(
         listed: true,
         ping: 0,
         game_mode: GameMode::Creative,
-        display_name: Some("SomeBot".into_cow_text()),
+        display_name: None,
     }];
 
     let info = play::PlayerListS2c {
@@ -136,8 +136,7 @@ pub fn player_join_world(
         .append_round_robin(&spawn_player, PacketMetadata::REQUIRED)
         .unwrap();
 
-    info!("Player {} joined the world", player.name);
-    // encoder.0.append_round_robin(&join_world, PacketMetadata::REQUIRED).unwrap();
+    info!("Player {} joined the world with id {:?}", player.name, entity_id);
 }
 
 fn write_block_states(states: &BlockStateContainer, writer: &mut impl Write) -> anyhow::Result<()> {
