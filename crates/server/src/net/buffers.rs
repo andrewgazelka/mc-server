@@ -16,9 +16,8 @@ use crate::{
     singleton::ring::Ring,
 };
 
-const COUNT: usize = 1024;
-
-const BUFFER_SIZE: usize = MAX_PACKET_SIZE * 4;
+const COUNT: usize = 16_384;
+const BUFFER_SIZE: usize = MAX_PACKET_SIZE * 2;
 
 #[derive(Component)]
 pub struct BufferAllocator {

@@ -327,15 +327,15 @@ impl Hyperion {
         world.add_handler(system::player_kick);
         world.add_handler(system::init_entity);
         world.add_handler(system::entity_move_logic);
-        world.add_handler(system::entity_detect_collisions);
+        // world.add_handler(system::entity_detect_collisions);
         world.add_handler(system::sync_entity_position);
-        world.add_handler(system::recalculate_bounding_boxes);
+        // world.add_handler(system::recalculate_bounding_boxes);
         world.add_handler(system::update_time);
         world.add_handler(system::send_time);
         world.add_handler(system::update_health);
         world.add_handler(system::sync_players);
         world.add_handler(system::rebuild_player_location);
-        world.add_handler(system::player_detect_mob_hits);
+        // world.add_handler(system::player_detect_mob_hits);
 
         world.add_handler(system::equipment::set);
 
